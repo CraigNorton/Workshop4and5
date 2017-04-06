@@ -1,7 +1,6 @@
 import React from 'react';
-import {unixTimeToString} from '../util';
+import {unixTimeToString} from '../util.js';
 import {Link} from 'react-router';
-import {likeComment,unlikeComment} from '../server';
 
 export default class Comment extends React.Component {
   render() {

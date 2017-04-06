@@ -2,25 +2,18 @@ import React from 'react';
 import StatusUpdate from './statusupdate';
 import CommentThread from './commentthread';
 import Comment from './comment';
-import {postComment, likeFeedItem, unlikeFeedItem} from '../server';
+import {postComment} from '../server';
+import {unlikeFeedItem} from '../server';
+import {likeFeedItem} from '../server';
 
 export default class FeedItem extends React.Component {
-
   constructor(props) {
-    super(props);
-    // The FeedItem's initial state is what the Feed passed to us.
-    this.state = props.data;
-  }
+  super(props);
+  // The FeedItem's initial state is what the Feed passed to us.
+  this.state = props.data;
+}
 
-  handleCommentPost(commentText) {
-    // Post a comment as user ID 4, which is our mock user!
-    postComment(this.state._id, 4, commentText, (updatedFeedItem) => {
-      // Update our state to trigger a re-render.
-      this.setState(updatedFeedItem);
-    });
-  }
-
-  /**
+/**
    * Triggered when the user clicks on the 'like' or 'unlike' button.
    */
   handleLikeClick(clickEvent) {
@@ -67,6 +60,13 @@ export default class FeedItem extends React.Component {
     return liked;
   }
 
+  handleCommentPost(commentText) {
+  // Post a comment as user ID 4, which is our mock user!
+  postComment(this.state._id, 4, commentText, (updatedFeedItem) => {
+    // Update our state to trigger a re-render.
+    this.setState(updatedFeedItem);
+  });
+}
   render() {
     var likeButtonText = "Like";
     if (this.didUserLike()) {
@@ -124,9 +124,9 @@ export default class FeedItem extends React.Component {
             </div>
           </div>
           <hr />
-          <CommentThread onPost={(commentText) => this.handleCommentPost(commentText)}>
+           <CommentThread onPost={(commentText) => this.handleCommentPost(commentText)}>
             {
-              data.comments.map((comment, i) => {
+            data.comments.map((comment, i) => {
               // i is comment's index in comments array
               return (
                 <Comment key={i} author={comment.author} postDate={comment.postDate}>{comment.contents}</Comment>

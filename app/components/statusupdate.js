@@ -1,7 +1,6 @@
 import React from 'react';
-import {unixTimeToString} from '../util';
+import {unixTimeToString} from '../util.js';
 import {Link} from 'react-router';
-
 
 export default class StatusUpdate extends React.Component {
   render() {

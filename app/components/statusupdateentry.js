@@ -19,9 +19,7 @@ export default class StatusUpdateEntry extends React.Component {
     // Trim whitespace from beginning + end of entry.
     var statusUpdateText = this.state.value.trim();
     if (statusUpdateText !== "") {
-      /* TODO: How do we send the post to the server + update the Feed? */
-      // Reset status update.
-      this.props.onPost(statusUpdateText);
+        this.props.onPost(statusUpdateText);
       this.setState({value: ""});
     }
   }
