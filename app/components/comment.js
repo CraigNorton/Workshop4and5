@@ -74,7 +74,7 @@ export default class Comment extends React.Component {
         <br />
         <a href="#" onClick={(e) => this.handleLikeClick(e)}>
         <span className="glyphicon glyphicon-thumbs-up"></span>
-        {likeButtonText}
+        {likeButtonText} {this.state.likeCounter.length}
         </a>
         · <a href="#">Reply</a> · {unixTimeToString(this.props.postDate)}
         </div>
