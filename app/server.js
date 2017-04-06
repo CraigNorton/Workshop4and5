@@ -9,7 +9,6 @@ function emulateServerReturn(data, cb) {
     cb(data);
   }, 4);
 }
-
 /**
  * Given a feed item ID, returns a FeedItem object with references resolved.
  * Internal to the server, since it's synchronous.
@@ -29,6 +28,38 @@ function getFeedItemSync(feedItemId) {
     comment.author = readDocument('users', comment.author);
   });
   return feedItem;
+}
+
+export function postStatusUpdate(user, location, contents, cb) {
+  // If we were implementing this for real on an actual server,
+  // we would check that the user ID is correct & matches the
+  // authenticated user. But since we're mocking it, we can
+  // be less strict.
+  // Get the current UNIX time.
+  var time = new Date().getTime();
+  // The new status update. The database will assign the ID for us.
+  var newStatusUpdate = {
+    "likeCounter": [],
+    "type": "statusUpdate",
+    "contents": {
+      "author": user,
+      "postDate": time,
+      "location": location,
+      "contents": contents
+    },
+    // List of comments on the post
+    "comments": []
+  };
+  newStatusUpdate = addDocument('feedItems', newStatusUpdate);
+  // Add the status update reference to the front of the
+  // current user's feed.
+  var userData = readDocument('users', user);
+  var feedData = readDocument('feeds', userData.feed);
+  feedData.contents.unshift(newStatusUpdate._id);
+  // Update the feed object.
+  writeDocument('feeds', feedData);
+  // Return the newly-posted object.
+  emulateServerReturn(newStatusUpdate, cb);
 }
 
 /**
@@ -52,46 +83,6 @@ export function getFeedData(user, cb) {
 }
 
 /**
- * Adds a new status update to the database.
- */
-export function postStatusUpdate(user, location, contents, cb) {
-  // If we were implementing this for real on an actual server, we would check
-  // that the user ID is correct & matches the authenticated user. But since
-  // we're mocking it, we can be less strict.
-
-  // Get the current UNIX time.
-  var time = new Date().getTime();
-  // The new status update. The database will assign the ID for us.
-  var newStatusUpdate = {
-    "likeCounter": [],
-    "type": "statusUpdate",
-    "contents": {
-      "author": user,
-      "postDate": time,
-      "location": location,
-      "contents": contents
-    },
-    // List of comments on the post
-    "comments": []
-  };
-
-  // Add the status update to the database.
-  // Returns the status update w/ an ID assigned.
-  newStatusUpdate = addDocument('feedItems', newStatusUpdate);
-
-  // Add the status update reference to the front of the current user's feed.
-  var userData = readDocument('users', user);
-  var feedData = readDocument('feeds', userData.feed);
-  feedData.contents.unshift(newStatusUpdate._id);
-
-  // Update the feed object.
-  writeDocument('feeds', feedData);
-
-  // Return the newly-posted object.
-  emulateServerReturn(newStatusUpdate, cb);
-}
-
-/**
  * Adds a new comment to the database on the given feed item.
  * Returns the updated FeedItem object.
  */
@@ -104,7 +95,8 @@ export function postComment(feedItemId, author, contents, cb) {
   feedItem.comments.push({
     "author": author,
     "contents": contents,
-    "postDate": new Date().getTime()
+    "postDate": new Date().getTime(),
+    "likeCounter": []
   });
   writeDocument('feedItems', feedItem);
   // Return a resolved version of the feed item so React can
@@ -113,36 +105,85 @@ export function postComment(feedItemId, author, contents, cb) {
 }
 
 /**
- * Updates a feed item's likeCounter by adding the user to the likeCounter.
- * Provides an updated likeCounter in the response.
+ * Updates a feed item's likeCounter by adding the
+ * user to the likeCounter. Provides an updated likeCounter
+ * in the response.
  */
 export function likeFeedItem(feedItemId, userId, cb) {
   var feedItem = readDocument('feedItems', feedItemId);
-  // Normally, we would check if the user already liked this comment.
-  // But we will not do that in this mock server.
-  // ('push' modifies the array by adding userId to the end)
+  // Normally, we would check if the user already
+  // liked this comment. But we will not do that
+  // in this mock server. ('push' modifies the array
+  // by adding userId to the end)
   feedItem.likeCounter.push(userId);
   writeDocument('feedItems', feedItem);
   // Return a resolved version of the likeCounter
-  emulateServerReturn(feedItem.likeCounter.map((userId) => readDocument('users', userId)), cb);
+  emulateServerReturn(feedItem.likeCounter.map((userId) =>
+    readDocument('users', userId)), cb);
 }
-
 /**
- * Updates a feed item's likeCounter by removing the user from the likeCounter.
+ * Updates a feed item's likeCounter by removing
+ * the user from the likeCounter.
  * Provides an updated likeCounter in the response.
  */
 export function unlikeFeedItem(feedItemId, userId, cb) {
   var feedItem = readDocument('feedItems', feedItemId);
   // Find the array index that contains the user's ID.
-  // (We didn't *resolve* the FeedItem object, so it is just an array of user IDs)
+  // (We didn't *resolve* the FeedItem object, so
+  // it is just an array of user IDs)
   var userIndex = feedItem.likeCounter.indexOf(userId);
-  // -1 means the user is *not* in the likeCounter, so we can simply avoid updating
-  // anything if that is the case: the user already doesn't like the item.
+  // -1 means the user is *not* in the likeCounter,
+  // so we can simply avoid updating
+  // anything if that is the case: the user already
+  // doesn't like the item.
   if (userIndex !== -1) {
-    // 'splice' removes items from an array. This removes 1 element starting from userIndex.
+    // 'splice' removes items from an array. This
+    // removes 1 element starting from userIndex.
     feedItem.likeCounter.splice(userIndex, 1);
     writeDocument('feedItems', feedItem);
   }
   // Return a resolved version of the likeCounter
-  emulateServerReturn(feedItem.likeCounter.map((userId) => readDocument('users', userId)), cb);
+  emulateServerReturn(feedItem.likeCounter.map((userId) =>
+    readDocument('users', userId)), cb);
+}
+
+
+export function likeComment(commentId, userId, cb, feedItemId, commentObj) {
+  var feedItem = readDocument('feedItems', feedItemId);
+  var comment = feedItem.comments[commentId];
+  // Normally, we would check if the user already
+  // liked this comment. But we will not do that
+  // in this mock server. ('push' modifies the array
+  // by adding userId to the end)
+  comment.likeCounter.push(userId);
+  writeDocument('feedItems', comment);
+  commentObj.setState({likeCounter: comment.likeCounter});
+  // Return a resolved version of the likeCounter
+  emulateServerReturn(comment.likeCounter, cb);
+}
+/**
+ * Updates a feed item's likeCounter by removing
+ * the user from the likeCounter.
+ * Provides an updated likeCounter in the response.
+ */
+export function unlikeComment(commentId, userId, cb, feedItemId, commentObj) {
+  var feedItem = readDocument('feedItems', feedItemId);
+  var comment = feedItem.comments[commentId];
+  // Find the array index that contains the user's ID.
+  // (We didn't *resolve* the FeedItem object, so
+  // it is just an array of user IDs)
+  var userIndex = comment.likeCounter.indexOf(userId);
+  // -1 means the user is *not* in the likeCounter,
+  // so we can simply avoid updating
+  // anything if that is the case: the user already
+  // doesn't like the item.
+  if (userIndex !== -1) {
+    // 'splice' removes items from an array. This
+    // removes 1 element starting from userIndex.
+    comment.likeCounter.splice(userIndex, 1);
+    writeDocument('feedItems', comment);
+  }
+  commentObj.setState({likeCounter: comment.likeCounter});
+  // Return a resolved version of the likeCounter
+  emulateServerReturn(comment.likeCounter, cb);
 }
